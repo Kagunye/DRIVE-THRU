@@ -1,0 +1,6 @@
+{
+  "name": "kfc-drive-thru",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Static car simulation — no build, no dependencies"
+}

@@ -1,7 +1,8 @@
 # Static site: serve from repo root (index.html is the car simulation)
+# Explicit no-op build so Netlify does NOT run pip/npm install (which would fail on Python deps)
 [build]
   publish = "."
-  command = ""
+  command = "echo 'Static site — no build required'"
 
 [[redirects]]
   from = "/*"
