@@ -1,0 +1,27 @@
+{
+  "special_offers": [
+    "Streetwise 2 plus coleslaw, 350 Kenyan shillings",
+    "Mango crusher, 450 Kenyan shillings",
+    "Zinger burger with 350ml coke, 500 Kenyan shillings",
+    "Speak to Cashier"
+  ],
+  "loop_detector_pin": 18,
+  "detection_interval": 3.0,
+  "voice_timeout": 15.0,
+  "operator_notification": true,
+  "tts_rate": 150,
+  "tts_volume": 1.0,
+  "use_raspberry_pi": true,
+  "use_continuous_listening": true,
+  "max_order_duration": 60,
+  "voice_preference": "male",
+  "voice_language_preference": "ke",
+  "voice_name": "Microsoft David Desktop - English (United States)",
+  "order_voice_name": "Microsoft Zira Desktop - English (United States)",
+  "simple_flow": true,
+  "use_ollama_whisper": true,
+  "ollama_base_url": "http://localhost:11434",
+  "whisper_model": "base",
+  "use_ollama_for_processing": false,
+  "ollama_model": "llama2"
+}

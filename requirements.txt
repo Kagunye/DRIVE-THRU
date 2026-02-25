@@ -1,0 +1,10 @@
+speechrecognition>=3.10.0
+pyaudio>=0.2.11
+pyttsx3>=2.90
+pywin32>=305; sys_platform == 'win32'
+openai-whisper>=20231117
+ollama>=0.1.7
+torch>=2.0.0
+numpy>=1.24.0
+# RPi.GPIO only needed for Raspberry Pi
+# RPi.GPIO>=0.7.1
