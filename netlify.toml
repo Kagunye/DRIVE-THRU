@@ -1,0 +1,9 @@
+# Static site: serve from repo root (index.html is the car simulation)
+[build]
+  publish = "."
+  command = ""
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

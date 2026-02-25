@@ -8,7 +8,7 @@ An automated drive-through ordering system for KFC that detects car approach via
 
 When you open the link above you’ll see the **car simulation**: the drive-thru lane, loop sensor, speaker, base station, and order flow. Click **START — Full run** to watch the car move from the sensor through ordering to pick-up.
 
-**If you get a 404:** GitHub Pages might not be enabled yet. Go to the repo **Settings → Pages**, set **Source** to **Deploy from a branch**, choose branch **main** and folder **/ (root)**, then Save. Wait 1–2 minutes and try the link again. See **[GITHUB_PAGES_SETUP.md](GITHUB_PAGES_SETUP.md)** for step-by-step instructions.
+**Getting 404?** Deploy the same site to Netlify in ~2 minutes: **[Deploy to Netlify](https://app.netlify.com/start/deploy?repository=https://github.com/Kagunye/DRIVE-THRU)** — then use the URL Netlify gives you. See **[GITHUB_PAGES_SETUP.md](GITHUB_PAGES_SETUP.md)** for more options.
 
 ---
 
