@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KFC Drive-Through — Car Simulation</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 12px;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: #2d2d2d;
+      color: #eee;
+      min-height: 100vh;
+    }
+    h1 {
+      text-align: center;
+      color: #c4a035;
+      font-size: 1.4rem;
+      margin: 0 0 8px 0;
+    }
+    .sub {
+      text-align: center;
+      color: #888;
+      font-size: 0.9rem;
+      margin-bottom: 12px;
+    }
+    .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .top {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+    .canvas-wrap {
+      flex: 0 0 auto;
+      background: #1e3d2e;
+      padding: 4px;
+      border-radius: 4px;
+    }
+    #cv {
+      display: block;
+      background: #1e3d2e;
+    }
+    .right {
+      flex: 1 1 280px;
+      min-width: 260px;
+    }
+    .panel {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 4px;
+      padding: 8px 10px;
+      margin-bottom: 8px;
+    }
+    .panel label {
+      display: block;
+      font-size: 0.75rem;
+      color: #888;
+      margin-bottom: 4px;
+    }
+    .panel .val {
+      font-size: 1rem;
+      color: #7fff7f;
+    }
+    .menu-title {
+      font-size: 0.9rem;
+      color: #aaa;
+      margin: 8px 0 4px 0;
+    }
+    .menu-btn {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 6px 10px;
+      margin: 2px 0;
+      border: none;
+      border-radius: 4px;
+      background: #3d5a3d;
+      color: #fff;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .menu-btn:hover { background: #4d6a4d; }
+    .btns {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .btns button {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+    .start-btn {
+      background: #c4a035;
+      color: #1a1a1a;
+    }
+    .start-btn:disabled {
+      background: #555;
+      color: #888;
+      cursor: not-allowed;
+    }
+    .reset-btn {
+      background: #444;
+      color: #fff;
+    }
+    .reset-btn:hover { background: #555; }
+    .order-box {
+      margin-top: 10px;
+      background: #0a0a0a;
+      border: 1px solid #c4a035;
+      border-radius: 4px;
+      padding: 10px;
+      min-height: 120px;
+    }
+    .order-box .title {
+      color: #c4a035;
+      font-size: 0.85rem;
+      margin-bottom: 6px;
+    }
+    .order-box pre {
+      margin: 0;
+      font-family: Consolas, monospace;
+      font-size: 0.8rem;
+      color: #7fff7f;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .status {
+      text-align: center;
+      color: #aaa;
+      font-size: 0.9rem;
+      margin-top: 10px;
+      padding: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>KFC Drive-Through — Full Flow Simulation</h1>
+    <p class="sub">Car on sensor → menu read → order → pick up. Click <strong>START</strong> to run.</p>
+
+    <div class="top">
+      <div class="canvas-wrap">
+        <canvas id="cv" width="1176" height="616"></canvas>
+      </div>
+      <div class="right">
+        <div class="panel">
+          <label>BASE STATION</label>
+          <div class="val" id="baseLabel">OFF — waiting for loop</div>
+        </div>
+        <div class="panel">
+          <label>CLIENT RESPONSE</label>
+          <div class="val" id="clientLabel">—</div>
+        </div>
+        <div class="menu-title">Customer picks (simulate):</div>
+        <button class="menu-btn" data-idx="0">1. Streetwise 2 plus coleslaw - 350 KES</button>
+        <button class="menu-btn" data-idx="1">2. Mango crusher - 450 KES</button>
+        <button class="menu-btn" data-idx="2">3. Zinger burger with 350ml coke - 500 KES</button>
+        <button class="menu-btn" data-idx="3">4. Speak to Cashier</button>
+        <div class="btns">
+          <button class="start-btn" id="startBtn">START — Full run</button>
+          <button class="reset-btn" id="resetBtn">Reset</button>
+        </div>
+        <div class="order-box">
+          <div class="title">ORDER CONFIRMED / Car # / Order list</div>
+          <pre id="orderDisplay">No order yet. Click START to run the full flow.</pre>
+        </div>
+      </div>
+    </div>
+    <div class="status" id="status">Click START — Full run. Car does the full flow; timer on canvas.</div>
+  </div>
+
+  <script>
+    (function () {
+      const SCALE = 2.8;
+      function s(v) { return Math.round(v * SCALE); }
+      const LANE_W = s(100), CAR_LEN = s(78), CAR_H = s(36);
+      const LOOP_X = s(35) + CAR_LEN + s(10), LOOP_Y = s(58), LOOP_W = s(42), LOOP_H = s(48);
+      const SPEAKER_X = LOOP_X + LOOP_W + s(18), SPEAKER_Y = s(60), SPEAKER_W = s(48), SPEAKER_H = s(50);
+      const BASE_X = s(118), BASE_Y = s(20), BASE_W = s(62), BASE_H = s(36);
+      const ORDER_BOOTH_X = s(252), COLLECTION_X = s(362), BOOTH_W = s(55), BOOTH_H = s(75);
+      const CANVAS_W = s(420), CANVAS_H = s(220);
+      const POS_SENSOR = 0.18, POS_ORDER = 0.45, POS_COLLECTION = 0.85;
+      const MENU_ITEMS = [
+        "Streetwise 2 plus coleslaw - 350 KES",
+        "Mango crusher - 450 KES",
+        "Zinger burger with 350ml coke - 500 KES",
+        "Speak to Cashier"
+      ];
+
+      const canvas = document.getElementById("cv");
+      const ctx = canvas.getContext("2d");
+      const baseLabel = document.getElementById("baseLabel");
+      const clientLabel = document.getElementById("clientLabel");
+      const orderDisplay = document.getElementById("orderDisplay");
+      const statusEl = document.getElementById("status");
+      const startBtn = document.getElementById("startBtn");
+      const resetBtn = document.getElementById("resetBtn");
+
+      let state = {
+        carProgress: -0.05,
+        loopTriggered: false,
+        baseStationOn: false,
+        orderItems: [],
+        orderConfirmed: false,
+        clientResponse: "",
+        carNumber: 0,
+        timerStart: null,
+        timerRunning: false,
+        timerInterval: null
+      };
+
+      function carPosition() {
+        const t = Math.max(0, Math.min(1, state.carProgress));
+        const carBeforeLoop = LOOP_X - CAR_LEN - s(8);
+        const laneEnd = s(405) - CAR_LEN;
+        const x = carBeforeLoop + t * (laneEnd - carBeforeLoop);
+        const y = s(100) - CAR_H / 2;
+        return { x, y };
+      }
+
+      function drawStatic() {
+        ctx.fillStyle = "#b0d4e8";
+        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+        ctx.fillStyle = "#3a5c32";
+        ctx.fillRect(0, s(148), CANVAS_W, CANVAS_H);
+        ctx.fillStyle = "#444";
+        ctx.strokeStyle = "#333";
+        ctx.fillRect(s(25), s(48), s(390), s(104));
+        ctx.fillStyle = "#3a3a3a";
+        ctx.fillRect(s(35), s(55), s(370), s(90));
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(s(35), s(55));
+        ctx.lineTo(s(405), s(55));
+        ctx.stroke();
+        ctx.strokeStyle = "#d4a020";
+        ctx.beginPath();
+        ctx.moveTo(s(35), s(145));
+        ctx.lineTo(s(405), s(145));
+        ctx.stroke();
+        ctx.fillStyle = "#555";
+        ctx.fillRect(s(232), s(55), s(165), s(95));
+        ctx.fillStyle = "#a02020";
+        ctx.fillRect(s(230), s(25), s(169), s(32));
+        ctx.fillStyle = "#2a3540";
+        ctx.strokeStyle = "#d4a020";
+        ctx.strokeRect(ORDER_BOOTH_X + 4, 54, 44, 42);
+        ctx.fillStyle = "#d4a020";
+        ctx.font = "bold 10px Segoe UI";
+        ctx.textAlign = "center";
+        ctx.fillText("ORDER", ORDER_BOOTH_X + BOOTH_W/2, 72);
+        ctx.fillStyle = "#1a2a1a";
+        ctx.strokeStyle = "#5a8a5a";
+        ctx.strokeRect(COLLECTION_X + 4, 54, 44, 42);
+        ctx.fillStyle = "#8acc8a";
+        ctx.fillText("PICK UP", COLLECTION_X + BOOTH_W/2, 72);
+        ctx.fillStyle = "#d4a020";
+        ctx.fillRect(s(368), s(10), s(48), s(40));
+        ctx.fillStyle = "#1a1a1a";
+        ctx.fillText("KFC", s(368) + s(24), s(22));
+        ctx.font = "bold 6px Segoe UI";
+        ctx.fillStyle = "#5c4a18";
+        ctx.fillText("DRIVE THRU", s(368) + s(24), s(38));
+        ctx.fillStyle = "#0c1810";
+        ctx.strokeStyle = "#d4a020";
+        ctx.strokeRect(s(242), s(112), s(148), s(32));
+      }
+
+      function drawTimer() {
+        ctx.fillStyle = "#222";
+        ctx.strokeStyle = "#d4a020";
+        ctx.lineWidth = 1;
+        ctx.fillRect(s(28), s(6), s(74), s(22));
+        ctx.strokeRect(s(28), s(6), s(74), s(22));
+        let text = "0:00";
+        if (state.timerStart && state.timerRunning) {
+          const elapsed = (Date.now() / 1000) - state.timerStart;
+          const m = Math.floor(elapsed / 60);
+          const sec = Math.floor(elapsed % 60);
+          text = m + ":" + (sec < 10 ? "0" : "") + sec;
+        }
+        ctx.fillStyle = "#d4a035";
+        ctx.font = "bold 12px Consolas";
+        ctx.fillText(text, s(65), s(17));
+      }
+
+      function drawEquipment() {
+        ctx.fillStyle = state.loopTriggered ? "#2a5a2a" : "#244a24";
+        ctx.strokeStyle = state.loopTriggered ? "#5aaa5a" : "#3a6a3a";
+        ctx.fillRect(LOOP_X, LOOP_Y, LOOP_W, LOOP_H);
+        ctx.strokeRect(LOOP_X, LOOP_Y, LOOP_W, LOOP_H);
+        ctx.fillStyle = "#8acc8a";
+        ctx.font = "bold 8px Segoe UI";
+        ctx.fillText("LOOP", LOOP_X + LOOP_W/2 - 12, LOOP_Y + LOOP_H/2 - 4);
+        ctx.fillText("Sensor", LOOP_X + LOOP_W/2 - 12, LOOP_Y + LOOP_H/2 + 6);
+        ctx.fillStyle = "#b05820";
+        ctx.fillRect(SPEAKER_X, SPEAKER_Y, SPEAKER_W, SPEAKER_H);
+        ctx.fillStyle = "#fff";
+        ctx.beginPath();
+        ctx.arc(SPEAKER_X + SPEAKER_W/2, SPEAKER_Y + 16, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 7px Segoe UI";
+        ctx.fillText("SPEAKER", SPEAKER_X + SPEAKER_W/2 - 20, SPEAKER_Y + SPEAKER_H - 8);
+        ctx.fillStyle = "#1a3a1a";
+        ctx.strokeStyle = "#3a6a3a";
+        ctx.fillRect(BASE_X, BASE_Y, BASE_W, BASE_H);
+        ctx.strokeRect(BASE_X, BASE_Y, BASE_W, BASE_H);
+        ctx.fillStyle = "#7acc7a";
+        ctx.fillText("BASE", BASE_X + BASE_W/2 - 14, BASE_Y + BASE_H/2 + 4);
+      }
+
+      function drawCar() {
+        const { x, y } = carPosition();
+        ctx.fillStyle = "#b00";
+        ctx.fillRect(x, y + s(14), CAR_LEN, CAR_H);
+        ctx.fillStyle = "#c00";
+        ctx.fillRect(x + s(4), y + s(18), CAR_LEN - s(8), CAR_H - s(4));
+        ctx.fillStyle = "#3a5068";
+        ctx.fillRect(x + s(38), y + s(18), CAR_LEN - s(50), 10);
+        ctx.fillStyle = "#a00";
+        ctx.fillRect(x + s(32), y + s(8), CAR_LEN - s(40), 12);
+        ctx.fillStyle = "#111";
+        ctx.beginPath();
+        ctx.ellipse(x + s(14), y + CAR_H, 8, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(x + CAR_LEN - s(14), y + CAR_H, 8, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#fff8b0";
+        ctx.beginPath();
+        ctx.ellipse(x + s(5), y + s(25), 3, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#cc2222";
+        ctx.beginPath();
+        ctx.ellipse(x + CAR_LEN - s(5), y + s(25), 3, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      function drawOrderScreen() {
+        let text = "No order yet";
+        if (state.orderItems.length) {
+          const lines = ["ORDER CONFIRMED", "Car #" + state.carNumber].concat(
+            state.orderItems.map(function (idx) { return "• " + (MENU_ITEMS[idx] ? MENU_ITEMS[idx].split(" - ")[0] : "Item"); })
+          );
+          text = lines.join("\n");
+        }
+        ctx.fillStyle = "#0c1810";
+        ctx.strokeStyle = "#d4a035";
+        ctx.fillRect(s(242), s(112), s(148), s(32));
+        ctx.strokeRect(s(242), s(112), s(148), s(32));
+        ctx.fillStyle = "#8acc8a";
+        ctx.font = "9px Consolas";
+        const parts = text.split("\n");
+        parts.forEach(function (line, i) {
+          ctx.fillText(line.substring(0, 22), s(248), s(118) + i * 10);
+        });
+      }
+
+      function render() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const scaleX = canvas.width / CANVAS_W;
+        const scaleY = canvas.height / CANVAS_H;
+        ctx.save();
+        ctx.scale(scaleX, scaleY);
+        drawStatic();
+        drawTimer();
+        drawEquipment();
+        drawCar();
+        drawOrderScreen();
+        ctx.restore();
+      }
+
+      function updateUI() {
+        if (state.baseStationOn) {
+          baseLabel.textContent = "ON — reading menu";
+          baseLabel.style.color = "#7fff7f";
+        } else if (state.loopTriggered) {
+          baseLabel.textContent = "Triggered by loop";
+          baseLabel.style.color = "#c4a035";
+        } else {
+          baseLabel.textContent = "OFF — waiting for loop";
+          baseLabel.style.color = "#666";
+        }
+        clientLabel.textContent = state.clientResponse || "—";
+        if (state.orderItems.length) {
+          let t = "ORDER CONFIRMED — Car #" + state.carNumber + "\n\n";
+          state.orderItems.forEach(function (idx) {
+            t += "  • " + MENU_ITEMS[idx] + "\n";
+          });
+          t += "\n[ Human preparing — drive to pick up to collect & pay ]";
+          orderDisplay.textContent = t;
+        } else {
+          orderDisplay.textContent = "No order yet. Click START to run the full flow.";
+        }
+      }
+
+      function showMenuReadOut() {
+        let t = "Reading out menu:\n\nWelcome to KFC drive thru. These are the specials of the day.\n\n";
+        MENU_ITEMS.forEach(function (name, i) {
+          t += "  " + (i + 1) + ". " + name + "\n";
+        });
+        t += "\nSay 1, 2, 3, or 4 for your choice. Say 0 to repeat. Say 6 to cancel. I am listening now.";
+        orderDisplay.textContent = t;
+      }
+
+      function reset() {
+        state.carProgress = -0.05;
+        state.loopTriggered = false;
+        state.baseStationOn = false;
+        state.orderItems = [];
+        state.orderConfirmed = false;
+        state.clientResponse = "";
+        state.carNumber = 0;
+        state.timerRunning = false;
+        state.timerStart = null;
+        if (state.timerInterval) {
+          clearInterval(state.timerInterval);
+          state.timerInterval = null;
+        }
+        startBtn.disabled = false;
+        statusEl.textContent = "Click START — Full run. Car does the full flow; timer on canvas.";
+        updateUI();
+        render();
+      }
+
+      function runFullFlow() {
+        reset();
+        state.timerStart = Date.now() / 1000;
+        state.timerRunning = true;
+        startBtn.disabled = true;
+        statusEl.textContent = "Running full flow…";
+        state.timerInterval = setInterval(function () {
+          drawTimer();
+          render();
+        }, 200);
+
+        function animateCar(toProgress, steps, stepMs, onDone) {
+          let step = 0;
+          const start = state.carProgress;
+          const run = function () {
+            step++;
+            state.carProgress = start + (toProgress - start) * (step / steps);
+            render();
+            if (step >= steps) {
+              state.carProgress = toProgress;
+              if (onDone) onDone();
+              return;
+            }
+            setTimeout(run, stepMs);
+          };
+          setTimeout(run, stepMs);
+        }
+
+        function afterSensor() {
+          state.loopTriggered = true;
+          state.baseStationOn = true;
+          baseLabel.textContent = "ON — reading menu";
+          baseLabel.style.color = "#7fff7f";
+          statusEl.textContent = "Car on sensor — menu by voice. Say 1–4 to order, 0 repeat, 6 cancel.";
+          showMenuReadOut();
+          render();
+          setTimeout(function () {
+            state.clientResponse = "Number 1";
+            state.carNumber = 1;
+            state.orderItems.push(0);
+            state.orderConfirmed = true;
+            statusEl.textContent = "Order confirmed. Car #1. Drive to pick up.";
+            updateUI();
+            render();
+            setTimeout(function () {
+              animateCar(POS_ORDER, 28, 35, function () {
+                state.carProgress = POS_ORDER;
+                render();
+                setTimeout(function () {
+                  statusEl.textContent = "Car moving to pick up — collect order and pay.";
+                  animateCar(POS_COLLECTION, 35, 35, function () {
+                    state.carProgress = POS_COLLECTION;
+                    state.timerRunning = false;
+                    if (state.timerInterval) clearInterval(state.timerInterval);
+                    state.timerInterval = null;
+                    startBtn.disabled = false;
+                    statusEl.textContent = "Done. Car at pick up — customer collects order and pays.";
+                    render();
+                  });
+                }, 800);
+              });
+            }, 1000);
+          }, 2500);
+        }
+
+        animateCar(POS_SENSOR, 15, 40, afterSensor);
+      }
+
+      startBtn.addEventListener("click", runFullFlow);
+      resetBtn.addEventListener("click", reset);
+      document.querySelectorAll(".menu-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          const idx = parseInt(btn.getAttribute("data-idx"), 10);
+          state.clientResponse = "Number " + (idx + 1);
+          state.carNumber = state.carNumber || 1;
+          state.orderItems.push(idx);
+          state.orderConfirmed = true;
+          updateUI();
+          render();
+          statusEl.textContent = "Order confirmed. Car #" + state.carNumber + ". Drive to pick up to collect and pay.";
+        });
+      });
+
+      drawStatic();
+      drawTimer();
+      drawEquipment();
+      drawCar();
+      drawOrderScreen();
+    })();
+  </script>
+</body>
+</html>
